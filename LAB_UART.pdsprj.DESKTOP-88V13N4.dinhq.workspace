@@ -188,7 +188,7 @@
      <ITEM name="TopLineAddress">40013000</ITEM>
     </PROPERTIES>
    </POPUP>
-   <POPUP w="16" x="408" flags="0000000a" y="520" h="32" pid="190" iid="6">
+   <POPUP w="16" x="408" flags="0000000a" y="520" h="26" pid="190" iid="6">
     <PROPERTIES>
      <ITEM name="DataType">2</ITEM>
      <ITEM name="DispChars">Yes</ITEM>
@@ -372,7 +372,7 @@
    <POPUP w="194" x="768" flags="00000008" y="880" h="281" pid="191" iid="6">
     <PROPERTIES/>
    </POPUP>
-   <POPUP w="450" x="354" flags="00008023" y="560" h="250" pid="0" iid="9">
+   <POPUP w="450" x="592" flags="00008023" y="181" h="250" pid="0" iid="9">
     <PROPERTIES>
      <ITEM name="AutoEcho">0</ITEM>
      <ITEM name="HexMode">0</ITEM>

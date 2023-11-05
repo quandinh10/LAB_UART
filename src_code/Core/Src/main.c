@@ -101,7 +101,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 		}
 
 		HAL_UART_Receive_IT(&huart2, &temp, 1);
-
 	}
 }
 
@@ -113,13 +112,13 @@ void command_parser_fsm() {
 
         if (strcmp(temp_buffer, "!RST#") == 0) {
         	HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
-        	HAL_UART_Transmit(&huart2, (uint8_t*)"RST is true\r\n", strlen("RST is true\r\n"), 100);
+        	HAL_UART_Transmit(&huart2, (uint8_t*)"RST command\r\n", strlen("RST is true\r\n"), 100);
         	token_data = 1;
         	token_flag = 1;
         }
         else if (strcmp(temp_buffer,"!OK#") == 0){
         	HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
-        	HAL_UART_Transmit(&huart2, (uint8_t*)"OK is true\r\n", strlen("OK is true\r\n"), 100);
+        	HAL_UART_Transmit(&huart2, (uint8_t*)"OK command\r\n", strlen("OK is true\r\n"), 100);
         	token_data = 2;
         }
     }
@@ -134,17 +133,17 @@ void uart_communication_fsm(){
 		token_flag = 0;
 		//TODO YOUR DFA
 		switch(token_data){
-		case 0:
-			break;
-		case 1:
+		case RST:
 			HAL_ADC_Start(&hadc1);
 			ADC_value = HAL_ADC_GetValue(&hadc1);
 			HAL_ADC_Stop(&hadc1);
 			HAL_UART_Transmit(&huart2, (void*)str, sprintf(str,"!ADC=%ld#\r\n",ADC_value), 100);
 			setTimer1(300);
-		case 2:
+		case OK:
 			token_flag = 0;
 			timer1_flag = 0;
+		default:
+			break;
 		}
 	}
 }
