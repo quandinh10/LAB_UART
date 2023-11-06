@@ -67,84 +67,94 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 #define MAX_BUFFER_SIZE 30
+
+#define INIT 10
+#define READ 11
+#define ADC  12
+#define IDLE 13
+
 #define RST 1
 #define OK 2
-#define DATA 3
+
 uint8_t temp = 0;
 uint8_t buffer[MAX_BUFFER_SIZE];
 uint8_t index_buffer = 0;
 uint8_t buffer_flag = 0;
-uint8_t over_flag = 0;
 uint8_t token_flag = 0;
-uint8_t len = 0;
-int token_data = 0;
+int read_state = 10;
+int token_state = 0;
 uint32_t ADC_value = 0;
 char str[20];
+char data[MAX_BUFFER_SIZE];
+int index_data = 0;
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if (huart->Instance == USART2){
 		HAL_UART_Transmit(&huart2, &temp, 1, 50);
-
 		buffer[index_buffer++]=temp;
-		//if user "Enter", parse command
-		if (temp == '\r') {
-			if (over_flag != 1) {
-				buffer_flag = 1;
-				len = index_buffer;
-				index_buffer = 0;
-			}
-			else over_flag = 0;
-		}
-
-		if (index_buffer == MAX_BUFFER_SIZE) {
-			over_flag = 1;
-			index_buffer = 0;
-		}
-
+		if (index_buffer == MAX_BUFFER_SIZE) index_buffer = 0;
+		buffer_flag = 1;
 		HAL_UART_Receive_IT(&huart2, &temp, 1);
 	}
 }
 
+void clear(){
+	memset(data,'\0',sizeof(data));
+	index_data=0;
+}
 void command_parser_fsm() {
-    if (buffer_flag == 1) {
-        char temp_buffer[MAX_BUFFER_SIZE];
-        strncpy(temp_buffer, (char*)buffer, len - 1);
-        temp_buffer[len - 1] = '\0';
-
-        if (strcmp(temp_buffer, "!RST#") == 0) {
-        	HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
-        	HAL_UART_Transmit(&huart2, (uint8_t*)"RST command\r\n", strlen("RST is true\r\n"), 100);
-        	token_data = 1;
-        	token_flag = 1;
-        }
-        else if (strcmp(temp_buffer,"!OK#") == 0){
-        	HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
-        	HAL_UART_Transmit(&huart2, (uint8_t*)"OK command\r\n", strlen("OK is true\r\n"), 100);
-        	token_data = 2;
-        }
-    }
+	switch(read_state){
+	case INIT:
+		if (buffer[index_buffer-1] == '!') {
+			read_state = READ;
+		}
+		clear();
+		break;
+	case READ:
+		if (buffer[index_buffer-1] == '!') clear();
+		else if (buffer[index_buffer-1] == '#') {
+			token_flag = 1;
+			read_state = INIT;
+		}
+		else {
+			data[index_data++] = buffer[index_buffer-1];
+		}
+		break;
+	default:
+		break;
+	}
 }
 
 
 void uart_communication_fsm(){
-	if (timer1_flag == 1){
-		token_flag = 1;
-	}
 	if (token_flag){
+		if (strcmp(data,"RST") == 0) token_state = RST;
+		else if (strcmp(data,"OK") == 0) token_state = OK;
+		clear();
 		token_flag = 0;
-		//TODO YOUR DFA
-		switch(token_data){
-		case RST:
-			HAL_ADC_Start(&hadc1);
-			ADC_value = HAL_ADC_GetValue(&hadc1);
-			HAL_ADC_Stop(&hadc1);
-			HAL_UART_Transmit(&huart2, (void*)str, sprintf(str,"!ADC=%ld#\r\n",ADC_value), 100);
-			setTimer1(300);
-		case OK:
-			token_flag = 0;
-			timer1_flag = 0;
-		default:
-			break;
+	}
+	switch(token_state){
+	case IDLE:
+		break;
+	case RST:
+		HAL_ADC_Start(&hadc1);
+		ADC_value = HAL_ADC_GetValue(&hadc1);
+		HAL_ADC_Stop(&hadc1);
+		HAL_UART_Transmit(&huart2, (void*)str, sprintf(str,"!ADC=%ld#\r\n",ADC_value), 100);
+		setTimer1(100);
+		token_state = ADC;
+		break;
+	case ADC:
+		if (timer1_flag == 1){
+			token_state = RST;
 		}
+		break;
+	case OK:
+		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+		setTimer1(0);
+		timer1_flag = 0;
+		token_state = IDLE;
+	default:
+		break;
 	}
 }
 /* USER CODE END 0 */
